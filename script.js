@@ -509,6 +509,168 @@ function renderRatingsSection() {
   ratingsTrackBottom.innerHTML = `${bottomMarkup}${bottomMarkup}`;
 }
 
+function getStructuredDataProductName(productName) {
+  const categoryPattern = /\b(liquid|liquidy|olejek|olejki|s[oó]l nikotynowa|sole nikotynowe)\b/i;
+  return categoryPattern.test(productName)
+    ? productName
+    : `Liquid do e papierosa ${productName} 30ml`;
+}
+
+function getStructuredDataFaqItems() {
+  return [...document.querySelectorAll('.faq-list .faq-item')]
+    .map((item) => {
+      const question = item.querySelector('.faq-trigger')?.childNodes?.[0]?.textContent.trim();
+      const answer = item.querySelector('.faq-content p')?.textContent.trim().replace(/\s+/g, ' ');
+
+      if (!question || !answer) return null;
+
+      return {
+        '@type': 'Question',
+        name: question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: answer,
+        },
+      };
+    })
+    .filter(Boolean);
+}
+
+function renderStructuredData() {
+  const officialSiteUrl = 'https://lq-merrymi.pl/';
+  const productCollectionUrl = `${officialSiteUrl}#produkty`;
+  const organizationId = `${officialSiteUrl}#organization`;
+  const websiteId = `${officialSiteUrl}#website`;
+  const collectionId = `${officialSiteUrl}#produkty`;
+  const itemListId = `${officialSiteUrl}#produkty-list`;
+
+  const itemListElements = products.map((product, index) => {
+    const productId = `${officialSiteUrl}#product-${encodeURIComponent(product.name.toLowerCase().replace(/\s+/g, '-'))}`;
+
+    return {
+      '@type': 'ListItem',
+      position: index + 1,
+      item: {
+        '@id': productId,
+        '@type': 'Product',
+        name: getStructuredDataProductName(product.name),
+        image: new URL(product.image, officialSiteUrl).href,
+        description: `MerryMi Liquidy 30ml w wariancie smakowym ${product.name}. Produkt przeznaczony wyłącznie dla pełnoletnich użytkowników e-papierosów.`,
+        brand: {
+          '@id': organizationId,
+        },
+        category: 'Liquidy do e papierosa / sole nikotynowe',
+        url: productCollectionUrl,
+        // Price, currency, stock status, contacts and social profiles are omitted because they are not present in this static site.
+        offers: {
+          '@type': 'Offer',
+          url: externalShopUrl,
+          itemCondition: 'https://schema.org/NewCondition',
+        },
+      },
+    };
+  });
+
+  const faqItemsForSchema = getStructuredDataFaqItems();
+
+  const graph = [
+    {
+      '@type': 'OnlineStore',
+      '@id': organizationId,
+      name: 'MerryMi Liquidy',
+      url: officialSiteUrl,
+      logo: `${officialSiteUrl}logo.png`,
+      image: `${officialSiteUrl}images/merrymi-lq-olejki-do-epapierosa.png`,
+      areaServed: {
+        '@type': 'Country',
+        name: 'Polska',
+      },
+      availableLanguage: 'pl-PL',
+    },
+    {
+      '@type': 'WebSite',
+      '@id': websiteId,
+      name: 'MerryMi Liquidy',
+      url: officialSiteUrl,
+      inLanguage: 'pl-PL',
+      publisher: {
+        '@id': organizationId,
+      },
+    },
+    {
+      '@type': 'BreadcrumbList',
+      '@id': `${officialSiteUrl}#breadcrumbs`,
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Strona główna',
+          item: officialSiteUrl,
+        },
+      ],
+    },
+    {
+      '@type': 'SiteNavigationElement',
+      '@id': `${officialSiteUrl}#site-navigation`,
+      name: ['Start', 'Smaki', 'Produkty', 'FAQ', 'Kontakt'],
+      url: [
+        officialSiteUrl,
+        `${officialSiteUrl}#smaki`,
+        productCollectionUrl,
+        `${officialSiteUrl}#faq`,
+        `${officialSiteUrl}#kontakt`,
+      ],
+    },
+    {
+      '@type': 'CollectionPage',
+      '@id': collectionId,
+      name: 'Olejki do e papierosa - MerryMi Liquidy',
+      url: productCollectionUrl,
+      isPartOf: {
+        '@id': websiteId,
+      },
+      about: {
+        '@id': organizationId,
+      },
+      mainEntity: {
+        '@id': itemListId,
+      },
+      inLanguage: 'pl-PL',
+    },
+    {
+      '@type': 'ItemList',
+      '@id': itemListId,
+      name: 'Warianty smakowe MerryMi Liquidy 30ml',
+      numberOfItems: itemListElements.length,
+      itemListElement: itemListElements,
+    },
+  ];
+
+  if (faqItemsForSchema.length > 0) {
+    graph.push({
+      '@type': 'FAQPage',
+      '@id': `${officialSiteUrl}#faq`,
+      url: `${officialSiteUrl}#faq`,
+      inLanguage: 'pl-PL',
+      mainEntity: faqItemsForSchema,
+    });
+  }
+
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@graph': graph,
+  };
+
+  document.getElementById('merrymi-json-ld')?.remove();
+
+  const schemaScript = document.createElement('script');
+  schemaScript.id = 'merrymi-json-ld';
+  schemaScript.type = 'application/ld+json';
+  schemaScript.textContent = JSON.stringify(structuredData);
+
+  document.head.appendChild(schemaScript);
+}
+
 function renderTabs() {
   flavorTabs.innerHTML = tabsConfig
     .map(
@@ -594,6 +756,7 @@ function renderProducts() {
 renderTabs();
 renderProducts();
 renderRatingsSection();
+renderStructuredData();
 
 function scrollToHashTarget(hash) {
   const target = document.querySelector(hash);
