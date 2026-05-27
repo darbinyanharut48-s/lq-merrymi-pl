@@ -489,7 +489,7 @@ function renderRatingsSection() {
       .map(
         (item) => `
         <article class="rating-card">
-          <img src="${item.image}" alt="Smak MerryMi ${item.flavor}" loading="lazy" />
+          <img src="${item.image}" alt="Smak MerryMi ${item.flavor}" loading="lazy" decoding="async" />
           <div>
             <div class="rating-head">
               <strong>${item.name}</strong>
@@ -507,13 +507,6 @@ function renderRatingsSection() {
   const bottomMarkup = renderCards(bottomItems);
   ratingsTrackTop.innerHTML = `${topMarkup}${topMarkup}`;
   ratingsTrackBottom.innerHTML = `${bottomMarkup}${bottomMarkup}`;
-}
-
-function getStructuredDataProductName(productName) {
-  const categoryPattern = /\b(liquid|liquidy|olejek|olejki|s[oó]l nikotynowa|sole nikotynowe)\b/i;
-  return categoryPattern.test(productName)
-    ? productName
-    : `Liquid do e papierosa ${productName} 30ml`;
 }
 
 function getStructuredDataFaqItems() {
@@ -537,50 +530,34 @@ function getStructuredDataFaqItems() {
 }
 
 function renderStructuredData() {
-  const officialSiteUrl = 'https://lq-merrymi.pl/';
-  const productCollectionUrl = `${officialSiteUrl}#produkty`;
-  const organizationId = `${officialSiteUrl}#organization`;
-  const websiteId = `${officialSiteUrl}#website`;
-  const collectionId = `${officialSiteUrl}#produkty`;
-  const itemListId = `${officialSiteUrl}#produkty-list`;
+  const canonicalUrl = 'https://lq-merrymi.pl/';
+  const organizationId = `${canonicalUrl}#organization`;
+  const websiteId = `${canonicalUrl}#website`;
+  const breadcrumbId = `${canonicalUrl}#breadcrumb`;
+  const collectionId = `${canonicalUrl}#collection`;
+  const itemListId = `${canonicalUrl}#itemlist`;
+  const siteName = 'MerryMi Liquidy';
+  const pageDescription =
+    'MerryMi Liquidy: olejki do e papierosa, olejek do e papierosa, sól nikotynowa, sole nikotynowe i vape. Owocowe smaki dla pełnoletnich użytkowników.';
 
-  const itemListElements = products.map((product, index) => {
-    const productId = `${officialSiteUrl}#product-${encodeURIComponent(product.name.toLowerCase().replace(/\s+/g, '-'))}`;
-
-    return {
-      '@type': 'ListItem',
-      position: index + 1,
-      item: {
-        '@id': productId,
-        '@type': 'Product',
-        name: getStructuredDataProductName(product.name),
-        image: new URL(product.image, officialSiteUrl).href,
-        description: `MerryMi Liquidy 30ml w wariancie smakowym ${product.name}. Produkt przeznaczony wyłącznie dla pełnoletnich użytkowników e-papierosów.`,
-        brand: {
-          '@id': organizationId,
-        },
-        category: 'Liquidy do e papierosa / sole nikotynowe',
-        url: productCollectionUrl,
-        // Price, currency, stock status, contacts and social profiles are omitted because they are not present in this static site.
-        offers: {
-          '@type': 'Offer',
-          url: externalShopUrl,
-          itemCondition: 'https://schema.org/NewCondition',
-        },
-      },
-    };
-  });
+  const itemListElements = products.map((product, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    name: product.name,
+    url: externalShopUrl,
+  }));
 
   const faqItemsForSchema = getStructuredDataFaqItems();
 
   const graph = [
     {
-      '@type': 'OnlineStore',
+      '@type': 'Organization',
       '@id': organizationId,
-      name: 'MerryMi Liquidy',
-      url: officialSiteUrl,
-      logo: `${officialSiteUrl}logo.png`,
-      image: `${officialSiteUrl}images/merrymi-lq-olejki-do-epapierosa.png`,
+      name: siteName,
+      description: `${siteName} to polska strona informacyjna prezentująca wybrane modele, kolekcje oraz linki prowadzące do DBUCHA.com.`,
+      url: canonicalUrl,
+      logo: `${canonicalUrl}logo.png`,
+      image: `${canonicalUrl}images/merrymi-lq-olejki-do-epapierosa.png`,
       areaServed: {
         '@type': 'Country',
         name: 'Polska',
@@ -590,47 +567,45 @@ function renderStructuredData() {
     {
       '@type': 'WebSite',
       '@id': websiteId,
-      name: 'MerryMi Liquidy',
-      url: officialSiteUrl,
-      inLanguage: 'pl-PL',
+      name: siteName,
+      url: canonicalUrl,
       publisher: {
         '@id': organizationId,
       },
+      inLanguage: 'pl-PL',
     },
     {
       '@type': 'BreadcrumbList',
-      '@id': `${officialSiteUrl}#breadcrumbs`,
+      '@id': breadcrumbId,
       itemListElement: [
         {
           '@type': 'ListItem',
           position: 1,
-          name: 'Strona główna',
-          item: officialSiteUrl,
+          name: 'Strona Główna',
+          item: canonicalUrl,
         },
-      ],
-    },
-    {
-      '@type': 'SiteNavigationElement',
-      '@id': `${officialSiteUrl}#site-navigation`,
-      name: ['Start', 'Smaki', 'Produkty', 'FAQ', 'Kontakt'],
-      url: [
-        officialSiteUrl,
-        `${officialSiteUrl}#smaki`,
-        productCollectionUrl,
-        `${officialSiteUrl}#faq`,
-        `${officialSiteUrl}#kontakt`,
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'MerryMi Liquidy 30ml',
+          item: externalShopUrl,
+        },
       ],
     },
     {
       '@type': 'CollectionPage',
       '@id': collectionId,
-      name: 'Olejki do e papierosa - MerryMi Liquidy',
-      url: productCollectionUrl,
+      name: siteName,
+      description: pageDescription,
+      url: canonicalUrl,
       isPartOf: {
         '@id': websiteId,
       },
       about: {
         '@id': organizationId,
+      },
+      breadcrumb: {
+        '@id': breadcrumbId,
       },
       mainEntity: {
         '@id': itemListId,
@@ -640,7 +615,7 @@ function renderStructuredData() {
     {
       '@type': 'ItemList',
       '@id': itemListId,
-      name: 'Warianty smakowe MerryMi Liquidy 30ml',
+      name: 'Lista modeli prezentowanych na stronie',
       numberOfItems: itemListElements.length,
       itemListElement: itemListElements,
     },
@@ -649,10 +624,9 @@ function renderStructuredData() {
   if (faqItemsForSchema.length > 0) {
     graph.push({
       '@type': 'FAQPage',
-      '@id': `${officialSiteUrl}#faq`,
-      url: `${officialSiteUrl}#faq`,
-      inLanguage: 'pl-PL',
+      '@id': `${canonicalUrl}#faq`,
       mainEntity: faqItemsForSchema,
+      inLanguage: 'pl-PL',
     });
   }
 
@@ -730,7 +704,7 @@ function renderProducts() {
         <div class="variant-media">
           <span class="variant-flavor-badge variant-flavor-badge--${badge.key}">${badge.label}</span>
           <span class="variant-rating-badge">⭐ ${rating.score} · ${rating.ratingsCount}</span>
-          <img src="${product.image}" alt="MerryMi Liquidy ${product.name}" loading="lazy" />
+          <img src="${product.image}" alt="MerryMi Liquidy ${product.name}" loading="lazy" decoding="async" />
         </div>
         <div class="variant-card-body">
           <h3><span class="variant-emoji">${getProductEmoji(product)}</span>${product.name}</h3>
